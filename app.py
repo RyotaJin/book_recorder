@@ -19,18 +19,22 @@ def fetch_book_info(isbn):
                 title = record.get('title', 'タイトルなし')
                 creator = record.get('author', '著者情報なし')
                 ndc = record.get('dc:subject', 'NDC分類なし')
-                thumbnail = record.get('guid', None)  # サムネイルURLを取得
-                return title, creator, ndc, thumbnail
+                return title, creator, ndc
             else:
-                return None, None, "データが見つかりませんでした。", None
+                return None, None, "データが見つかりませんでした。"
         else:
-            return None, None, f"APIエラー: {response.status_code}", None
+            return None, None, f"APIエラー: {response.status_code}"
     except Exception as e:
-        return None, None, f"エラーが発生しました: {e}", None
+        return None, None, f"エラーが発生しました: {e}"
 
 def get_thumbnail(isbn):
     url = "https://ndlsearch.ndl.go.jp/thumbnail/" + str(isbn) + ".jpg"
-    return url
+
+    if requests.get(url).status_code == 404:
+        tmp_thumbnail = "NoImage.png"
+    else:
+        tmp_thumbnail = url
+    return tmp_thumbnail
 
 def load_data():
     """CSVファイルを読み込んでデータフレームとして返す"""
@@ -63,21 +67,25 @@ def main_page():
 
     if st.button("検索"):
         if isbn_input.strip():
-            st.session_state.title, st.session_state.creator, st.session_state.message, st.session_state.thumbnail = fetch_book_info(isbn_input)
+            st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info(isbn_input)
         else:
             st.error("ISBN番号を入力してください。")
 
-    title_box = st.text_input("タイトル", value=st.session_state.title)
-    creator_box = st.text_input("著者", value=st.session_state.creator)
-    message_box = st.text_input("NDC分類", value=st.session_state.message)
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        tmp_thumbnail = get_thumbnail(isbn_input)
+        st.image(tmp_thumbnail)
+    with col2:
+        title_box = st.text_input("タイトル", value=st.session_state.title)
+        creator_box = st.text_input("著者", value=st.session_state.creator)
+        message_box = st.text_input("NDC分類", value=st.session_state.message)
 
     if st.button("データを追加"):
         new_row = pd.DataFrame({
             "ISBN": isbn_input,
             "タイトル": title_box,
             "著者": creator_box,
-            "NDC分類": message_box,
-            "サムネイル": st.session_state.thumbnail
+            "NDC分類": message_box
         }, index=[0])
         st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True)
         st.success("データを追加しました。")
@@ -102,8 +110,6 @@ def data_page():
     for i, (_, row) in enumerate(filtered_data.iterrows()):
         col = cols[i % cols_per_row]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
-        if requests.get(tmp_thumbnail).status_code == 404:
-            tmp_thumbnail = "NoImage.png"
         with col:
             st.image(tmp_thumbnail, caption=row["タイトル"], width=100)
 
