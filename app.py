@@ -90,19 +90,17 @@ def main_page():
 def data_page():
     st.title("保存されたデータ")
     st.write("現在のデータフレームの内容:")
+    
+    cols = st.columns(5)
 
-    for _, row in st.session_state.data.iterrows():
-        col1, col2 = st.columns([1, 3])
+    for i, (_, row) in enumerate(st.session_state.data.iterrows()):
+        col = cols[i % 5]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
-        with col1:
-            if pd.notna(tmp_thumbnail):
-                st.image(tmp_thumbnail, width=100)
-            else:
-                st.write("サムネイルなし")
-        with col2:
-            st.write(f"**タイトル:** {row['タイトル']}")
-            st.write(f"**著者:** {row['著者']}")
-            st.write(f"**NDC分類:** {row['NDC分類']}")
+        if requests.get(tmp_thumbnail).status_code == 404:
+            tmp_thumbnail = "NoImage.png"
+        with col:
+            st.image(tmp_thumbnail, caption=row["タイトル"], width=100)
+
 
 # ページ選択
 page = st.sidebar.selectbox("ページを選択してください", ["検索", "データ表示"])
