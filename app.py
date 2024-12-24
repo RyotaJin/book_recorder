@@ -88,10 +88,12 @@ def main_page():
         st.success("データを保存しました。")
 
 def data_page():
-    cols = st.columns(5)
+    cols_per_row = st.slider("Number of columns per row", 3, 10, 5)
+
+    cols = st.columns(cols_per_row)
 
     for i, (_, row) in enumerate(st.session_state.data.iterrows()):
-        col = cols[i % 5]
+        col = cols[i % cols_per_row]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
         if requests.get(tmp_thumbnail).status_code == 404:
             tmp_thumbnail = "NoImage.png"
