@@ -4,7 +4,6 @@ import xmltodict
 import pandas as pd
 
 def fetch_book_info(isbn):
-    """NDLサーチAPIを利用して書籍情報を取得"""
     url = "https://iss.ndl.go.jp/api/opensearch"
     params = {"isbn": isbn}
 
@@ -16,9 +15,9 @@ def fetch_book_info(isbn):
             record = data["rss"]["channel"].get("item", None)
 
             if record:
-                title = record.get('title', 'タイトル不明')
-                creator = record.get('author', '著者情報不明')
-                ndc = record.get('dc:subject', 'NDC分類不明')
+                title = record.get("title", "タイトル不明")
+                creator = record.get("author", "著者情報不明")
+                ndc = record.get("dc:subject", "NDC分類不明")
                 return title, creator, ndc
             else:
                 return "データが見つかりませんでした", None, None
@@ -39,9 +38,9 @@ def fetch_book_info2(isbn):
             record = data["items"][0]["volumeInfo"]
 
             if record:
-                title = record.get('title', 'タイトル不明')
-                creator = record.get('authors', '著者情報不明')
-                ndc = 'NDC分類不明'
+                title = record.get("title", "タイトル不明")
+                creator = record.get("authors", "著者情報不明")
+                ndc = "NDC分類不明"
                 return title, creator, ndc
             else:
                 return "データが見つかりませんでした", None, None
@@ -63,7 +62,7 @@ def get_thumbnail(isbn):
         response = requests.get(url_, params=params)
         if response.status_code == 200:
             try:
-                tmp_thumbnail = response.json()["items"][0]["volumeInfo"]['imageLinks'].get("thumbnail", "NoImage.png")
+                tmp_thumbnail = response.json()["items"][0]["volumeInfo"]["imageLinks"].get("thumbnail", "NoImage.png")
             except:
                 return "NoImage.png"
     else:
@@ -71,7 +70,6 @@ def get_thumbnail(isbn):
     return tmp_thumbnail
 
 def load_data():
-    """CSVファイルを読み込んでデータフレームとして返す"""
     file_name = "data.csv"
     try:
         return pd.read_csv(file_name)
@@ -79,11 +77,9 @@ def load_data():
         return pd.DataFrame(columns=["ISBN", "タイトル", "著者", "NDC分類", "サムネイル"])
 
 def save_to_csv(dataframe):
-    """データフレームをCSVファイルに保存"""
     file_name = "data.csv"
     dataframe.to_csv(file_name, index=False)
 
-# アプリの初期化
 st.set_page_config(page_title="NDLサーチAPIで書籍情報を取得", layout="wide")
 
 def main_page():
@@ -149,8 +145,6 @@ def data_page():
         with col:
             st.image(tmp_thumbnail, caption=row["タイトル"], width=100)
 
-
-# ページ選択
 page = st.sidebar.radio("ページを選択してください", ["書籍登録", "サムネ表示", "データ表示"])
 
 if page == "書籍登録":
