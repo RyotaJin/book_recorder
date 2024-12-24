@@ -16,22 +16,56 @@ def fetch_book_info(isbn):
             record = data["rss"]["channel"].get("item", None)
 
             if record:
-                title = record.get('title', 'タイトルなし')
-                creator = record.get('author', '著者情報なし')
-                ndc = record.get('dc:subject', 'NDC分類なし')
+                title = record.get('title', 'タイトル不明')
+                creator = record.get('author', '著者情報不明')
+                ndc = record.get('dc:subject', 'NDC分類不明')
                 return title, creator, ndc
             else:
-                return None, None, "データが見つかりませんでした。"
+                return "データが見つかりませんでした", None, None
         else:
-            return None, None, f"APIエラー: {response.status_code}"
+            return "APIエラー", f"{response.status_code}", None
     except Exception as e:
-        return None, None, f"エラーが発生しました: {e}"
+        return "エラーが発生しました", f"{e}", None
+
+def fetch_book_info2(isbn):
+    url = "https://www.googleapis.com/books/v1/volumes"
+    params = {"q": f"isbn:{isbn}",
+              "country": "JP"}
+    try:
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            record = data["items"][0]["volumeInfo"]
+
+            if record:
+                title = record.get('title', 'タイトル不明')
+                creator = record.get('authors', '著者情報不明')
+                ndc = 'NDC分類不明'
+                return title, creator, ndc
+            else:
+                return "データが見つかりませんでした", None, None
+        else:
+            return "APIエラー", f"{response.status_code}", None
+    except Exception as e:
+        return "エラーが発生しました", f"{e}", None
 
 def get_thumbnail(isbn):
-    url = "https://ndlsearch.ndl.go.jp/thumbnail/" + str(isbn) + ".jpg"
+    if isbn == "":
+        return "NoImage.png"
 
+    url = "https://ndlsearch.ndl.go.jp/thumbnail/" + str(isbn) + ".jpg"
+    
     if requests.get(url).status_code == 404:
-        tmp_thumbnail = "NoImage.png"
+        url_ = "https://www.googleapis.com/books/v1/volumes"
+        params = {"q": f"isbn:{isbn}",
+                "country": "JP"}
+        response = requests.get(url_, params=params)
+        if response.status_code == 200:
+            try:
+                tmp_thumbnail = response.json()["items"][0]["volumeInfo"]['imageLinks'].get("thumbnail", "NoImage.png")
+            except:
+                return "NoImage.png"
     else:
         tmp_thumbnail = url
     return tmp_thumbnail
@@ -56,7 +90,7 @@ def main_page():
     if "data" not in st.session_state:
         st.session_state.data = load_data()
 
-    st.title("NDLサーチAPIで書籍情報を取得")
+    st.title("ISBNで書籍情報を取得")
 
     isbn_input = st.text_input("ISBN番号を入力してください", "")
     if "title" not in st.session_state:
@@ -68,6 +102,8 @@ def main_page():
     if st.button("検索"):
         if isbn_input.strip():
             st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info(isbn_input)
+            if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
+                st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info2(isbn_input)
         else:
             st.error("ISBN番号を入力してください。")
 
@@ -115,9 +151,9 @@ def data_page():
 
 
 # ページ選択
-page = st.sidebar.radio("ページを選択してください", ["検索", "サムネ表示", "データ表示"])
+page = st.sidebar.radio("ページを選択してください", ["書籍登録", "サムネ表示", "データ表示"])
 
-if page == "検索":
+if page == "書籍登録":
     main_page()
 elif page == "サムネ表示":
     data_page()
