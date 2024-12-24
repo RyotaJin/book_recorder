@@ -110,8 +110,6 @@ def main_page():
     if "data" not in st.session_state:
         st.session_state.data = load_data()
 
-    st.title("ISBNで書籍情報を取得")
-
     isbn_input = st.text_input("ISBN番号を入力してください", "")
     if "title" not in st.session_state:
         st.session_state.title = ""
@@ -187,4 +185,4 @@ if page == "書籍登録":
 elif page == "サムネ表示":
     data_page()
 elif page == "データ表示":
-    st.dataframe(st.session_state.data)
+    st.dataframe(st.session_state.data, use_container_width=True)
