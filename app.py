@@ -74,7 +74,7 @@ def load_data():
     try:
         return pd.read_csv(file_name)
     except FileNotFoundError:
-        return pd.DataFrame(columns=["ISBN", "タイトル", "著者", "NDC分類", "サムネイル"])
+        return pd.DataFrame(columns=["ISBN", "Title", "Author", "NDC分類", "サムネイル"])
 
 def save_to_csv(dataframe):
     file_name = "data.csv"
@@ -92,14 +92,13 @@ def main_page():
     if "title" not in st.session_state:
         st.session_state.title = ""
         st.session_state.creator = ""
-        st.session_state.message = ""
-        st.session_state.thumbnail = ""
+        st.session_state.ndc = ""
 
     if st.button("検索"):
         if isbn_input.strip():
-            st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info(isbn_input)
+            st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info(isbn_input)
             if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
-                st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info2(isbn_input)
+                st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info2(isbn_input)
         else:
             st.error("ISBN番号を入力してください。")
 
@@ -110,14 +109,16 @@ def main_page():
     with col2:
         title_box = st.text_input("タイトル", value=st.session_state.title)
         creator_box = st.text_input("著者", value=st.session_state.creator)
-        message_box = st.text_input("NDC分類", value=st.session_state.message)
+        message_box = st.text_input("NDC分類", value=st.session_state.ndc)
+        message_box = st.selectbox("NDC大分類", )
 
     if st.button("データを追加"):
         new_row = pd.DataFrame({
             "ISBN": isbn_input,
-            "タイトル": title_box,
-            "著者": creator_box,
-            "NDC分類": message_box
+            "Title": title_box,
+            "Author": creator_box,
+            "NDC": message_box,
+            "NDC_major": 
         }, index=[0])
         st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True)
         st.success("データを追加しました。")
@@ -129,11 +130,11 @@ def main_page():
 def data_page():
     cols_per_row = st.slider("Number of columns per row", 3, 10, 5)
 
-    ndc_list = sorted(st.session_state.data["NDC_大分類"].dropna().unique().tolist())
+    ndc_list = sorted(st.session_state.data["NDC_major"].dropna().unique().tolist())
     selected_ndc = st.multiselect("NDC分類から抽出", ndc_list)
 
     if selected_ndc != []:
-        filtered_data = st.session_state.data[st.session_state.data["NDC_大分類"].isin(selected_ndc)]
+        filtered_data = st.session_state.data[st.session_state.data["NDC_major"].isin(selected_ndc)]
     else:
         filtered_data = st.session_state.data
 
@@ -143,7 +144,7 @@ def data_page():
         col = cols[i % cols_per_row]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
         with col:
-            st.image(tmp_thumbnail, caption=row["タイトル"], width=100)
+            st.image(tmp_thumbnail, caption=row["Title"], width=100)
 
 page = st.sidebar.radio("ページを選択してください", ["書籍登録", "サムネ表示", "データ表示"])
 
