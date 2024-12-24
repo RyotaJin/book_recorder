@@ -90,9 +90,17 @@ def main_page():
 def data_page():
     cols_per_row = st.slider("Number of columns per row", 3, 10, 5)
 
+    ndc_list = sorted(st.session_state.data["NDC_大分類"].dropna().unique().tolist())
+    selected_ndc = st.multiselect("NDC分類から抽出", ndc_list)
+    
+    if selected_ndc != []:
+        filtered_data = st.session_state.data[st.session_state.data["NDC_大分類"].isin(selected_ndc)]
+    else:
+        filtered_data = st.session_state.data
+
     cols = st.columns(cols_per_row)
 
-    for i, (_, row) in enumerate(st.session_state.data.iterrows()):
+    for i, (_, row) in enumerate(filtered_data.iterrows()):
         col = cols[i % cols_per_row]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
         if requests.get(tmp_thumbnail).status_code == 404:
