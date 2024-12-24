@@ -104,7 +104,7 @@ def save_to_csv(dataframe):
     file_name = "data.csv"
     dataframe.to_csv(file_name, index=False)
 
-st.set_page_config(page_title="NDLサーチAPIで書籍情報を取得", layout="wide")
+st.set_page_config(layout="wide")
 
 def main_page():
     if "data" not in st.session_state:
