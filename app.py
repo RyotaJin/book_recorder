@@ -92,7 +92,7 @@ def data_page():
 
     ndc_list = sorted(st.session_state.data["NDC_大分類"].dropna().unique().tolist())
     selected_ndc = st.multiselect("NDC分類から抽出", ndc_list)
-    
+
     if selected_ndc != []:
         filtered_data = st.session_state.data[st.session_state.data["NDC_大分類"].isin(selected_ndc)]
     else:
@@ -110,9 +110,11 @@ def data_page():
 
 
 # ページ選択
-page = st.sidebar.radio("ページを選択してください", ["検索", "データ表示"])
+page = st.sidebar.radio("ページを選択してください", ["検索", "サムネ表示", "データ表示"])
 
 if page == "検索":
     main_page()
-elif page == "データ表示":
+elif page == "サムネ表示":
     data_page()
+elif page == "データ表示":
+    st.dataframe(st.session_state.data)
