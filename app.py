@@ -4,7 +4,6 @@ import xmltodict
 import pandas as pd
 
 def fetch_book_info(isbn):
-    """NDLサーチAPIを利用して書籍情報を取得"""
     url = "https://iss.ndl.go.jp/api/opensearch"
     params = {"isbn": isbn}
 
@@ -16,24 +15,61 @@ def fetch_book_info(isbn):
             record = data["rss"]["channel"].get("item", None)
 
             if record:
-                title = record.get('title', 'タイトルなし')
-                creator = record.get('author', '著者情報なし')
-                ndc = record.get('dc:subject', 'NDC分類なし')
-                thumbnail = record.get('guid', None)  # サムネイルURLを取得
-                return title, creator, ndc, thumbnail
+                title = record.get("title", "タイトル不明")
+                creator = record.get("author", "著者情報不明")
+                ndc = record.get("dc:subject", "NDC分類不明")
+                return title, creator, ndc
             else:
-                return None, None, "データが見つかりませんでした。", None
+                return "データが見つかりませんでした", None, None
         else:
-            return None, None, f"APIエラー: {response.status_code}", None
+            return "APIエラー", f"{response.status_code}", None
     except Exception as e:
-        return None, None, f"エラーが発生しました: {e}", None
+        return "エラーが発生しました", f"{e}", None
+
+def fetch_book_info2(isbn):
+    url = "https://www.googleapis.com/books/v1/volumes"
+    params = {"q": f"isbn:{isbn}",
+              "country": "JP"}
+    try:
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            record = data["items"][0]["volumeInfo"]
+
+            if record:
+                title = record.get("title", "タイトル不明")
+                creator = record.get("authors", "著者情報不明")
+                ndc = "NDC分類不明"
+                return title, creator, ndc
+            else:
+                return "データが見つかりませんでした", None, None
+        else:
+            return "APIエラー", f"{response.status_code}", None
+    except Exception as e:
+        return "エラーが発生しました", f"{e}", None
 
 def get_thumbnail(isbn):
+    if isbn == "":
+        return "NoImage.png"
+
     url = "https://ndlsearch.ndl.go.jp/thumbnail/" + str(isbn) + ".jpg"
-    return url
+    
+    if requests.get(url).status_code == 404:
+        url_ = "https://www.googleapis.com/books/v1/volumes"
+        params = {"q": f"isbn:{isbn}",
+                "country": "JP"}
+        response = requests.get(url_, params=params)
+        if response.status_code == 200:
+            try:
+                tmp_thumbnail = response.json()["items"][0]["volumeInfo"]["imageLinks"].get("thumbnail", "NoImage.png")
+            except:
+                return "NoImage.png"
+    else:
+        tmp_thumbnail = url
+    return tmp_thumbnail
 
 def load_data():
-    """CSVファイルを読み込んでデータフレームとして返す"""
     file_name = "data.csv"
     try:
         return pd.read_csv(file_name)
@@ -41,18 +77,16 @@ def load_data():
         return pd.DataFrame(columns=["ISBN", "タイトル", "著者", "NDC分類", "サムネイル"])
 
 def save_to_csv(dataframe):
-    """データフレームをCSVファイルに保存"""
     file_name = "data.csv"
     dataframe.to_csv(file_name, index=False)
 
-# アプリの初期化
 st.set_page_config(page_title="NDLサーチAPIで書籍情報を取得", layout="wide")
 
 def main_page():
     if "data" not in st.session_state:
         st.session_state.data = load_data()
 
-    st.title("NDLサーチAPIで書籍情報を取得")
+    st.title("ISBNで書籍情報を取得")
 
     isbn_input = st.text_input("ISBN番号を入力してください", "")
     if "title" not in st.session_state:
@@ -63,21 +97,27 @@ def main_page():
 
     if st.button("検索"):
         if isbn_input.strip():
-            st.session_state.title, st.session_state.creator, st.session_state.message, st.session_state.thumbnail = fetch_book_info(isbn_input)
+            st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info(isbn_input)
+            if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
+                st.session_state.title, st.session_state.creator, st.session_state.message = fetch_book_info2(isbn_input)
         else:
             st.error("ISBN番号を入力してください。")
 
-    title_box = st.text_input("タイトル", value=st.session_state.title)
-    creator_box = st.text_input("著者", value=st.session_state.creator)
-    message_box = st.text_input("NDC分類", value=st.session_state.message)
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        tmp_thumbnail = get_thumbnail(isbn_input)
+        st.image(tmp_thumbnail)
+    with col2:
+        title_box = st.text_input("タイトル", value=st.session_state.title)
+        creator_box = st.text_input("著者", value=st.session_state.creator)
+        message_box = st.text_input("NDC分類", value=st.session_state.message)
 
     if st.button("データを追加"):
         new_row = pd.DataFrame({
             "ISBN": isbn_input,
             "タイトル": title_box,
             "著者": creator_box,
-            "NDC分類": message_box,
-            "サムネイル": st.session_state.thumbnail
+            "NDC分類": message_box
         }, index=[0])
         st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True)
         st.success("データを追加しました。")
@@ -102,16 +142,12 @@ def data_page():
     for i, (_, row) in enumerate(filtered_data.iterrows()):
         col = cols[i % cols_per_row]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
-        if requests.get(tmp_thumbnail).status_code == 404:
-            tmp_thumbnail = "NoImage.png"
         with col:
             st.image(tmp_thumbnail, caption=row["タイトル"], width=100)
 
+page = st.sidebar.radio("ページを選択してください", ["書籍登録", "サムネ表示", "データ表示"])
 
-# ページ選択
-page = st.sidebar.radio("ページを選択してください", ["検索", "サムネ表示", "データ表示"])
-
-if page == "検索":
+if page == "書籍登録":
     main_page()
 elif page == "サムネ表示":
     data_page()
