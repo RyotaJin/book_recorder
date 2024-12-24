@@ -154,7 +154,7 @@ def main_page():
             "NDC_major": ndc_major_box,
             "Note": note_box
         }, index=[0])
-        st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True).sort_values("Author")
+        st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True).sort_values(["Author", "Title"])
         st.success("データを追加しました。")
 
     if st.button("データを保存"):
