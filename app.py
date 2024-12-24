@@ -121,6 +121,8 @@ def main_page():
         st.session_state.note = ""
 
     if st.button("検索"):
+        if int(isbn_input) in st.session_state.data["ISBN"].to_list():
+            st.error("同一のISBNが登録されています。")
         if isbn_input.strip():
             st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info(isbn_input)
             if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
