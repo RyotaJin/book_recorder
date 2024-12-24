@@ -30,7 +30,6 @@ def fetch_book_info(isbn):
 
 def get_thumbnail(isbn):
     url = "https://ndlsearch.ndl.go.jp/thumbnail/" + str(isbn) + ".jpg"
-    response = requests.get(url)
     return url
 
 def load_data():
@@ -55,7 +54,7 @@ def main_page():
 
     st.title("NDLサーチAPIで書籍情報を取得")
 
-    isbn_input = st.text_input("ISBN番号を入力してください", "9784488663353")
+    isbn_input = st.text_input("ISBN番号を入力してください", "")
     if "title" not in st.session_state:
         st.session_state.title = ""
         st.session_state.creator = ""
@@ -88,26 +87,33 @@ def main_page():
         st.success("データを保存しました。")
 
 def data_page():
-    st.title("保存されたデータ")
-    st.write("現在のデータフレームの内容:")
+    cols_per_row = st.slider("Number of columns per row", 3, 10, 5)
 
-    for _, row in st.session_state.data.iterrows():
-        col1, col2 = st.columns([1, 3])
+    ndc_list = sorted(st.session_state.data["NDC_大分類"].dropna().unique().tolist())
+    selected_ndc = st.multiselect("NDC分類から抽出", ndc_list)
+
+    if selected_ndc != []:
+        filtered_data = st.session_state.data[st.session_state.data["NDC_大分類"].isin(selected_ndc)]
+    else:
+        filtered_data = st.session_state.data
+
+    cols = st.columns(cols_per_row)
+
+    for i, (_, row) in enumerate(filtered_data.iterrows()):
+        col = cols[i % cols_per_row]
         tmp_thumbnail = get_thumbnail(row["ISBN"])
-        with col1:
-            if pd.notna(tmp_thumbnail):
-                st.image(tmp_thumbnail, width=100)
-            else:
-                st.write("サムネイルなし")
-        with col2:
-            st.write(f"**タイトル:** {row['タイトル']}")
-            st.write(f"**著者:** {row['著者']}")
-            st.write(f"**NDC分類:** {row['NDC分類']}")
+        if requests.get(tmp_thumbnail).status_code == 404:
+            tmp_thumbnail = "NoImage.png"
+        with col:
+            st.image(tmp_thumbnail, caption=row["タイトル"], width=100)
+
 
 # ページ選択
-page = st.sidebar.selectbox("ページを選択してください", ["検索", "データ表示"])
+page = st.sidebar.radio("ページを選択してください", ["検索", "サムネ表示", "データ表示"])
 
 if page == "検索":
     main_page()
-elif page == "データ表示":
+elif page == "サムネ表示":
     data_page()
+elif page == "データ表示":
+    st.dataframe(st.session_state.data)
