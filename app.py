@@ -30,7 +30,6 @@ def fetch_book_info(isbn):
 
 def get_thumbnail(isbn):
     url = "https://ndlsearch.ndl.go.jp/thumbnail/" + str(isbn) + ".jpg"
-    response = requests.get(url)
     return url
 
 def load_data():
@@ -55,7 +54,7 @@ def main_page():
 
     st.title("NDLサーチAPIで書籍情報を取得")
 
-    isbn_input = st.text_input("ISBN番号を入力してください", "9784488663353")
+    isbn_input = st.text_input("ISBN番号を入力してください", "")
     if "title" not in st.session_state:
         st.session_state.title = ""
         st.session_state.creator = ""
