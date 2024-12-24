@@ -88,9 +88,6 @@ def main_page():
         st.success("データを保存しました。")
 
 def data_page():
-    st.title("保存されたデータ")
-    st.write("現在のデータフレームの内容:")
-    
     cols = st.columns(5)
 
     for i, (_, row) in enumerate(st.session_state.data.iterrows()):
@@ -103,7 +100,7 @@ def data_page():
 
 
 # ページ選択
-page = st.sidebar.selectbox("ページを選択してください", ["検索", "データ表示"])
+page = st.sidebar.radio("ページを選択してください", ["検索", "データ表示"])
 
 if page == "検索":
     main_page()
