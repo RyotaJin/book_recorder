@@ -118,6 +118,7 @@ def main_page():
         st.session_state.creator = ""
         st.session_state.ndc = ""
         st.session_state.ndc_major = ""
+        st.session_state.note = ""
 
     if st.button("検索"):
         if isbn_input.strip():
@@ -140,6 +141,7 @@ def main_page():
                                      ("0: 総記", "1: 哲学", "2: 歴史", "3: 社会科学", "4: 自然科学", "5: 技術",
                                       "6: 産業", "7: 芸術", "8: 言語", "9: 文学", "No Data"),
                                       index=ndc_mjor_index)
+        note_box = st.text_input("備考", value=st.session_state.note)
 
     if st.button("データを追加"):
         new_row = pd.DataFrame({
@@ -147,7 +149,8 @@ def main_page():
             "Title": title_box,
             "Author": creator_box,
             "NDC": ndc_box,
-            "NDC_major": ndc_major_box
+            "NDC_major": ndc_major_box,
+            "Note": note_box
         }, index=[0])
         st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True)
         st.success("データを追加しました。")
