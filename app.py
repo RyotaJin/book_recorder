@@ -143,7 +143,7 @@ def main_page():
                                       index=ndc_mjor_index)
         note_box = st.text_input("備考", value=st.session_state.note)
 
-    if st.button("データを追加"):
+    if st.button("データを保存"):
         new_row = pd.DataFrame({
             "ISBN": isbn_input,
             "Title": title_box,
@@ -153,9 +153,7 @@ def main_page():
             "Note": note_box
         }, index=[0])
         st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True).sort_values(["Author", "Title"])
-        st.success("データを追加しました。")
 
-    if st.button("データを保存"):
         save_to_csv(st.session_state.data)
         st.success("データを保存しました。")
 
