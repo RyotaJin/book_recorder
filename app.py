@@ -154,7 +154,7 @@ def main_page():
         title_box = st.text_input("タイトル", value=st.session_state.title)
         creator_box = st.text_input("著者", value=st.session_state.author)
         ndc_box = st.text_input("NDC分類", value=st.session_state.ndc)
-        ndc_mjor_index = 10 if st.session_state.ndc in ["", "NDC分類不明"] else int(st.session_state.ndc[0])
+        ndc_mjor_index = 10 if st.session_state.ndc in ["", None, "NDC分類不明"] else int(st.session_state.ndc[0])
         ndc_major_box = st.selectbox("NDC大分類",
                                      ("0: 総記", "1: 哲学", "2: 歴史", "3: 社会科学", "4: 自然科学", "5: 技術",
                                       "6: 産業", "7: 芸術", "8: 言語", "9: 文学", "No Data"),
