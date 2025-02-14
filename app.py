@@ -125,14 +125,14 @@ def main_page():
     if "title" not in st.session_state:
         st.session_state.isbn = ""
         st.session_state.title = ""
-        st.session_state.creator = ""
+        st.session_state.author = ""
         st.session_state.ndc = ""
         st.session_state.ndc_major = ""
         st.session_state.note = ""
 
     if st.button("検索"):
         st.session_state.title = ""
-        st.session_state.creator = ""
+        st.session_state.author = ""
         st.session_state.ndc = ""
         st.session_state.ndc_major = ""
         st.session_state.note = ""
@@ -140,9 +140,9 @@ def main_page():
         if st.session_state.isbn_check: 
             if int(st.session_state.isbn) in st.session_state.data["ISBN"].to_list():
                 st.error("同一のISBNが登録されています。")
-            st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info(st.session_state.isbn)
+            st.session_state.title, st.session_state.author, st.session_state.ndc = fetch_book_info(st.session_state.isbn)
             if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
-                st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info2(st.session_state.isbn)
+                st.session_state.title, st.session_state.author, st.session_state.ndc = fetch_book_info2(st.session_state.isbn)
         else:
             st.error(st.session_state.isbn)
 
@@ -152,7 +152,7 @@ def main_page():
         st.image(tmp_thumbnail, caption=st.session_state.isbn)
     with col2:
         title_box = st.text_input("タイトル", value=st.session_state.title)
-        creator_box = st.text_input("著者", value=st.session_state.creator)
+        creator_box = st.text_input("著者", value=st.session_state.author)
         ndc_box = st.text_input("NDC分類", value=st.session_state.ndc)
         ndc_mjor_index = 10 if st.session_state.ndc in ["", "NDC分類不明"] else int(st.session_state.ndc[0])
         ndc_major_box = st.selectbox("NDC大分類",
