@@ -2,6 +2,17 @@ import streamlit as st
 import requests
 import xmltodict
 import pandas as pd
+import re
+
+def isbn_checker(isbn):
+    digits = re.sub(r'\D', '', isbn)
+
+    if len(digits) != 10 and len(digits) != 13:
+        return False, "不適切な桁数です"
+    elif len(digits) == 13:
+        if not (digits.startswith("978") or digits.startswith("979")):
+            return False, "13桁ですが先頭3桁が不適切な数字です"
+    return True, digits
 
 def get_ndc(data):
     if "item" not in data["rss"]["channel"].keys():
@@ -112,6 +123,7 @@ def main_page():
 
     isbn_input = st.text_input("ISBN番号を入力してください", "")
     if "title" not in st.session_state:
+        st.session_state.isbn = ""
         st.session_state.title = ""
         st.session_state.creator = ""
         st.session_state.ndc = ""
@@ -119,19 +131,25 @@ def main_page():
         st.session_state.note = ""
 
     if st.button("検索"):
-        if int(isbn_input) in st.session_state.data["ISBN"].to_list():
-            st.error("同一のISBNが登録されています。")
-        if isbn_input.strip():
-            st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info(isbn_input)
+        st.session_state.title = ""
+        st.session_state.creator = ""
+        st.session_state.ndc = ""
+        st.session_state.ndc_major = ""
+        st.session_state.note = ""
+        st.session_state.isbn_check, st.session_state.isbn = isbn_checker(isbn_input)
+        if st.session_state.isbn_check: 
+            if int(st.session_state.isbn) in st.session_state.data["ISBN"].to_list():
+                st.error("同一のISBNが登録されています。")
+            st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info(st.session_state.isbn)
             if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
-                st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info2(isbn_input)
+                st.session_state.title, st.session_state.creator, st.session_state.ndc = fetch_book_info2(st.session_state.isbn)
         else:
-            st.error("ISBN番号を入力してください。")
+            st.error(st.session_state.isbn)
 
     col1, col2 = st.columns([1, 3])
     with col1:
-        tmp_thumbnail = get_thumbnail(isbn_input)
-        st.image(tmp_thumbnail)
+        tmp_thumbnail = get_thumbnail(st.session_state.isbn)
+        st.image(tmp_thumbnail, caption=st.session_state.isbn)
     with col2:
         title_box = st.text_input("タイトル", value=st.session_state.title)
         creator_box = st.text_input("著者", value=st.session_state.creator)
@@ -145,7 +163,7 @@ def main_page():
 
     if st.button("データを保存"):
         new_row = pd.DataFrame({
-            "ISBN": isbn_input,
+            "ISBN": st.session_state.isbn,
             "Title": title_box,
             "Author": creator_box,
             "NDC": ndc_box,
