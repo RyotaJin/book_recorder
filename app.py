@@ -201,4 +201,4 @@ if page == "書籍登録":
 elif page == "サムネ表示":
     data_page()
 elif page == "データ表示":
-    st.dataframe(st.session_state.data, use_container_width=True)
+    st.dataframe(st.session_state.data, height=1000, use_container_width=True, hide_index=True)
