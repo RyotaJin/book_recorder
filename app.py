@@ -1,11 +1,14 @@
+import os
+import re
+
+import pandas as pd
 import streamlit as st
 import requests
 import xmltodict
-import pandas as pd
-import re
+
 
 def isbn_checker(isbn):
-    digits = re.sub(r'\D', '', isbn)
+    digits = re.sub(r"\D", "", isbn)
 
     if len(digits) != 10 and len(digits) != 13:
         return False, "不適切な桁数です"
@@ -13,6 +16,7 @@ def isbn_checker(isbn):
         if not (digits.startswith("978") or digits.startswith("979")):
             return False, "13桁ですが先頭3桁が不適切な数字です"
     return True, digits
+
 
 def get_ndc(data):
     if "item" not in data["rss"]["channel"].keys():
@@ -38,6 +42,7 @@ def get_ndc(data):
 
     return ndc if ndc else "NDC分類不明"
 
+
 def fetch_book_info(isbn):
     url = "https://iss.ndl.go.jp/api/opensearch"
     params = {"isbn": isbn}
@@ -60,6 +65,7 @@ def fetch_book_info(isbn):
             return "APIエラー", f"{response.status_code}", None
     except Exception as e:
         return "エラーが発生しました", f"{e}", None
+
 
 def fetch_book_info2(isbn):
     url = "https://www.googleapis.com/books/v1/volumes"
@@ -84,6 +90,50 @@ def fetch_book_info2(isbn):
     except Exception as e:
         return "エラーが発生しました", f"{e}", None
 
+
+def download_thumbnail(isbn, url):
+    if not os.path.exists("thumbnail"):
+        os.makedirs("thumbnail")
+    filepath = f"thumbnail/{isbn}.jpg"
+    if not os.path.exists(filepath):
+        response = requests.get(url)
+        if response.status_code == 200:
+            with open(filepath, "wb") as f:
+                f.write(response.content)
+
+
+def download_thumbnails_for_all():
+    if not os.path.exists("thumbnail"):
+        os.makedirs("thumbnail")
+    
+    for isbn in st.session_state.data["ISBN"]:
+        if isbn and not os.path.exists(f"thumbnail/{isbn}.jpg"):
+            ndl_url = f"https://ndlsearch.ndl.go.jp/thumbnail/{isbn}.jpg"
+            response = requests.get(ndl_url)
+            
+            if response.status_code != 200:
+                alt_url = "https://www.googleapis.com/books/v1/volumes"
+                params = {"q": f"isbn:{isbn}", "country": "JP"}
+                response = requests.get(alt_url, params=params)
+                
+                if response.status_code == 200:
+                    image_links = response.json().get("items", [{}])[0].get("volumeInfo", {}).get("imageLinks", {})
+                    thumbnail_url = image_links.get("thumbnail")
+                    if thumbnail_url:
+                        response = requests.get(thumbnail_url)
+            
+            if response.status_code == 200:
+                with open(f"thumbnail/{isbn}.jpg", "wb") as f:
+                    f.write(response.content)
+    
+    st.success("サムネイルのダウンロードが完了しました。")
+
+
+def get_thumbnail_path(isbn):
+    filepath = f"thumbnail/{isbn}.jpg"
+    return filepath if os.path.exists(filepath) else "NoImage.png"
+
+
 def get_thumbnail(isbn):
     if isbn == "":
         return "NoImage.png"
@@ -104,6 +154,7 @@ def get_thumbnail(isbn):
         tmp_thumbnail = url
     return tmp_thumbnail
 
+
 def load_data():
     file_name = "data.csv"
     try:
@@ -111,9 +162,11 @@ def load_data():
     except FileNotFoundError:
         return pd.DataFrame(columns=["ISBN", "Title", "Author", "NDC分類", "サムネイル"])
 
+
 def save_to_csv(dataframe):
     file_name = "data.csv"
     dataframe.to_csv(file_name, index=False)
+
 
 st.set_page_config(layout="wide")
 
@@ -175,24 +228,20 @@ def main_page():
         save_to_csv(st.session_state.data)
         st.success("データを保存しました。")
 
+
 def data_page():
+    if st.button("サムネイルをダウンロード"):
+        download_thumbnails_for_all()
+
     cols_per_row = st.slider("Number of columns per row", 3, 10, 5)
-
-    ndc_list = sorted(st.session_state.data["NDC_major"].dropna().unique().tolist())
-    selected_ndc = st.multiselect("NDC分類から抽出", ndc_list)
-
-    if selected_ndc != []:
-        filtered_data = st.session_state.data[st.session_state.data["NDC_major"].isin(selected_ndc)]
-    else:
-        filtered_data = st.session_state.data
+    selected_ndc = st.multiselect("NDC分類から抽出", sorted(st.session_state.data["NDC_major"].dropna().unique().tolist()))
+    filtered_data = st.session_state.data[st.session_state.data["NDC_major"].isin(selected_ndc)] if selected_ndc else st.session_state.data
 
     cols = st.columns(cols_per_row)
-
     for i, (_, row) in enumerate(filtered_data.iterrows()):
-        col = cols[i % cols_per_row]
-        tmp_thumbnail = get_thumbnail(row["ISBN"])
-        with col:
-            st.image(tmp_thumbnail, caption=row["Title"], width=100)
+        with cols[i % cols_per_row]:
+            st.image(get_thumbnail_path(row["ISBN"]), caption=row["Title"], width=100)
+
 
 page = st.sidebar.radio("ページを選択してください", ["書籍登録", "サムネ表示", "データ表示"])
 
