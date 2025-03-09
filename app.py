@@ -56,7 +56,7 @@ def fetch_book_info(isbn):
 
             if record:
                 title = record.get("title", "タイトル不明")
-                creator = record.get("author", "著者情報不明")
+                creator = record.get("author", "著者情報不明").split(",")[-1]
                 ndc = get_ndc(data)
                 return title, creator, ndc
             else:
@@ -80,7 +80,7 @@ def fetch_book_info2(isbn):
 
             if record:
                 title = record.get("title", "タイトル不明")
-                creator = record.get("authors", "著者情報不明")
+                creator = record.get("authors", "著者情報不明").split(",")[-1]
                 ndc = "NDC分類不明"
                 return title, creator, ndc
             else:
