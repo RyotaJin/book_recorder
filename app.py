@@ -7,6 +7,27 @@ import requests
 import xmltodict
 
 
+EXPECTED_COLUMNS = ["ISBN", "Title", "Author", "NDC", "NDC_major", "Note"]
+
+
+def normalize_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize loaded/edited dataframe to avoid Streamlit/Arrow dtype issues.
+
+    - Ensure expected columns exist
+    - Force ISBN to be string (prevents mixed int/str -> Arrow conversion errors)
+    """
+    if df is None:
+        df = pd.DataFrame()
+
+    for col in EXPECTED_COLUMNS:
+        if col not in df.columns:
+            df[col] = pd.NA
+
+    df["ISBN"] = df["ISBN"].astype("string").fillna("")
+
+    return df
+
+
 def isbn_checker(isbn):
     digits = re.sub(r"\D", "", isbn)
 
@@ -107,6 +128,7 @@ def download_thumbnails_for_all():
         os.makedirs("thumbnail")
     
     for isbn in st.session_state.data["ISBN"]:
+        isbn = str(isbn).strip()
         if isbn and not os.path.exists(f"thumbnail/{isbn}.jpg"):
             ndl_url = f"https://ndlsearch.ndl.go.jp/thumbnail/{isbn}.jpg"
             response = requests.get(ndl_url)
@@ -158,14 +180,15 @@ def get_thumbnail(isbn):
 def load_data():
     file_name = "data.csv"
     try:
-        return pd.read_csv(file_name)
+        df = pd.read_csv(file_name, dtype={"ISBN": "string"})
+        return normalize_data(df)
     except FileNotFoundError:
-        return pd.DataFrame(columns=["ISBN", "Title", "Author", "NDC分類", "サムネイル"])
+        return normalize_data(pd.DataFrame(columns=EXPECTED_COLUMNS))
 
 
 def save_to_csv(dataframe):
     file_name = "data.csv"
-    dataframe.to_csv(file_name, index=False)
+    normalize_data(dataframe).to_csv(file_name, index=False)
 
 
 st.set_page_config(layout="wide")
@@ -191,7 +214,7 @@ def main_page():
         st.session_state.note = ""
         st.session_state.isbn_check, st.session_state.isbn = isbn_checker(isbn_input)
         if st.session_state.isbn_check: 
-            if int(st.session_state.isbn) in st.session_state.data["ISBN"].to_list():
+            if st.session_state.isbn in st.session_state.data["ISBN"].tolist():
                 st.error("同一のISBNが登録されています。")
             st.session_state.title, st.session_state.author, st.session_state.ndc = fetch_book_info(st.session_state.isbn)
             if st.session_state.title in ["データが見つかりませんでした", "APIエラー", "エラーが発生しました"]:
@@ -223,7 +246,11 @@ def main_page():
             "NDC_major": ndc_major_box,
             "Note": note_box
         }, index=[0])
-        st.session_state.data = pd.concat([st.session_state.data, new_row]).reset_index(drop=True).sort_values(["Author", "Title"])
+        st.session_state.data = normalize_data(
+            pd.concat([st.session_state.data, new_row])
+            .reset_index(drop=True)
+            .sort_values(["Author", "Title"], na_position="last")
+        )
 
         save_to_csv(st.session_state.data)
         st.success("データを保存しました。")
@@ -245,9 +272,15 @@ def data_page():
 
 page = st.sidebar.radio("ページを選択してください", ["書籍登録", "サムネ表示", "データ表示"])
 
+# Ensure session_state.data exists and is normalized even when opening other pages first.
+if "data" not in st.session_state:
+    st.session_state.data = load_data()
+else:
+    st.session_state.data = normalize_data(st.session_state.data)
+
 if page == "書籍登録":
     main_page()
 elif page == "サムネ表示":
     data_page()
 elif page == "データ表示":
-    st.dataframe(st.session_state.data, height=1000, use_container_width=True, hide_index=True)
+    st.dataframe(st.session_state.data, height=1000, width="stretch", hide_index=True)
