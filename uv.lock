@@ -41,6 +41,7 @@ name = "book-recorder"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "blinker" },
     { name = "streamlit" },
     { name = "watchdog" },
     { name = "xmltodict" },
@@ -48,6 +49,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "blinker", specifier = ">=1.9.0" },
     { name = "streamlit", specifier = ">=1.41.1,<2.0.0" },
     { name = "watchdog", specifier = ">=6.0.0" },
     { name = "xmltodict", specifier = ">=0.14.2,<0.15.0" },
